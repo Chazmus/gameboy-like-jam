@@ -7,7 +7,7 @@ game_objects = {}
 actions = {}
 inventory = {}
 function _init()
-	player = make_actor(9, 1, 1, 2, 2, 2, 10)
+	player = make_actor(9, 0, 0, 2, 2, 2, 10)
 	foreach(game_objects, 
 	function(go) 
 		if go.init != nil then
@@ -119,15 +119,12 @@ end
 -- check if a rectangle overlaps
 -- with any walls
 
---(this version only works for
---actors less than one tile big)
-
-function solid_area(x,y,w,h)
+function solid_area(x,y,width,height)
 	return 
-		solid(x-w,y-h) or
-		solid(x+w,y-h) or
-		solid(x-w,y+h) or
-		solid(x+w,y+h)
+		solid(x-width/2,y-height/2) or
+		solid(x+width/2,y-height/2) or
+		solid(x-width/2,y+height/2) or
+		solid(x+width/2,y+height/2)
 end
 
 -- true if [a] will hit another
@@ -145,8 +142,8 @@ function solid_actor(a, dx, dy)
 			local x=(a.x+dx) - a2.x
 			local y=(a.y+dy) - a2.y
 			
-			if ((abs(x) < (a.w+a2.w)) and
-					 (abs(y) < (a.h+a2.h)))
+			if ((abs(x) < (a.width/2+a2.width/2)) and
+					 (abs(y) < (a.height/2+a2.height/2)))
 			then
 				
 				-- moving together?
@@ -197,7 +194,7 @@ end
 -- checks both walls and actors
 function solid_a(a, dx, dy)
 	if solid_area(a.x+dx,a.y+dy,
-				a.w,a.h) then
+				a.width,a.height) then
 				return true end
 	return solid_actor(a, dx, dy) 
 end
@@ -275,13 +272,6 @@ function make_actor(k, x, y, frames, width, height, sprite_speed)
 		friction = 0.15,
 		bounce  = 0.3,
 		frames = frames,
-		
-		-- half-width and half-height
-		-- slightly less than 0.5 so
-		-- that will fit through 1-wide
-		-- holes.
-		w = width * 0.4,
-		h = height * 0.4,
 		width = width,
 		height = height,
 		sprite_speed = sprite_speed
@@ -292,9 +282,10 @@ function make_actor(k, x, y, frames, width, height, sprite_speed)
 end
 
 function draw_actor(a)
-	local sx = (a.x * 8 * a.width) - (4 * a.width)
-	local sy = (a.y * 8 * a.height) - (4 * a.height)
+	local sx = (a.x * 8) - (4)
+	local sy = (a.y * 8) - (4)
 	spr(a.k + a.frame, sx, sy, a.width, a.height)
+	printh(tostring(sx))
 end
 
 function spawn_collectible()
