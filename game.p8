@@ -207,7 +207,6 @@ end
 
 function collide_event(a1,a2)
 	
-	printh(a1 + " collided with " + a2, "debug.txt")
 	-- player collects treasure
 	if (a1==player and (a2.k == 1 or a2.k == 16 or a2.k == 17)) then
 		del(game_objects,a2)
