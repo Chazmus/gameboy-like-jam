@@ -28,6 +28,9 @@ function _draw()
     cls()
 	map(0)
 	foreach(game_objects, draw_actor)
+	rectfill(0, 0, 127, 10, 1)
+	print("items: ", 1, 1, 7)
+	draw_inventory_items()
 end
 
 
@@ -285,6 +288,14 @@ function draw_actor(a)
 	local sy = (a.y * 8) - (4)
 	spr(a.k + a.frame, sx, sy, a.width, a.height)
 	printh(tostring(sx))
+end
+
+function draw_inventory_items()
+	local x = 24
+	for a in all(inventory) do
+		spr(a, x, 1)
+		x += 10
+	end
 end
 
 function spawn_collectible()
