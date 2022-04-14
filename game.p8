@@ -6,7 +6,7 @@ __lua__
 game_objects = {}
 actions = {}
 function _init()
-	player = make_actor(9, 1, 1, 2, 2, 2)
+	player = make_actor(9, 1, 1, 2, 2, 2, 10)
 	foreach(game_objects, 
 	function(go) 
 		if go.init != nil then
@@ -246,13 +246,9 @@ function move_actor(a)
 	a.dx *= (1-a.friction)
 	a.dy *= (1-a.friction)
 	
-	-- advance one frame every
-	-- time actor moves 1/4 of
-	-- a tile
-	
-	a.frame += (abs(a.dx) * 4)
-	a.frame += (abs(a.dy) * 4)
-	a.frame %= a.frames
+	-- advance one frame given sprite speed
+	if(a.t%(100/a.sprite_speed)==0) a.frame+= a.width
+	if(a.frame>a.frames) a.frame=0
 	a.t += 1
 end
 
@@ -261,7 +257,7 @@ end
 -- k is the sprite number
 -- x,y means center of the actor
 -- in map tiles
-function make_actor(k, x, y, frames, width, height)
+function make_actor(k, x, y, frames, width, height, sprite_speed)
 	a={
 		k = k,
 		x = x,
@@ -281,7 +277,8 @@ function make_actor(k, x, y, frames, width, height)
 		w = width * 0.4,
 		h = height * 0.4,
 		width = width,
-		height = height
+		height = height,
+		sprite_speed = sprite_speed
 	}
 	
 	add(game_objects, a)
@@ -289,7 +286,6 @@ function make_actor(k, x, y, frames, width, height)
 end
 
 function draw_actor(a)
-	printh(a.width)
 	local sx = (a.x * 8 * a.width) - (4 * a.width)
 	local sy = (a.y * 8 * a.height) - (4 * a.height)
 	spr(a.k + a.frame, sx, sy, a.width, a.height)
