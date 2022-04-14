@@ -5,8 +5,8 @@ __lua__
 
 game_objects = {}
 actions = {}
-
 function _init()
+	player = make_actor(1, 1, 1)
 	foreach(game_objects, 
 	function(go) 
 		if go.init != nil then
@@ -16,34 +16,16 @@ function _init()
 end
 
 function _update()
-	foreach(game_objects, 
-	function(go) 
-		if go.update != nil then
-			go:update()
-		end
-	end)
-
-	foreach(actions, 
-	function(c)
-		if costatus(c) then
-		  coresume(c)
-		else
-		  del(actions,c)
-		end
-	end)
-
+	control_player(player)
+	foreach(game_objects, move_actor)
 	-- Input utils update MUST be done last
 	input_utils:update()
 end
 
 function _draw()
     cls()
-	foreach(game_objects, 
-	function(go) 
-		if go.draw != nil then
-			go:draw()
-		end
-	end)
+	map(0)
+	foreach(game_objects, draw_actor)
 end
 
 
@@ -59,8 +41,6 @@ input_utils = {
 	fire1 = false,
 	fire2 = false
 }
-
-add(game_objects, input_utils)
 
 function input_utils:update()
 	self[left] = btn(left)
@@ -104,46 +84,14 @@ end
 
 -->8
 -- section 1
-Player = {}
-function Player:new (o)
-  o = o or {}   -- create object if user does not provide one
-  setmetatable(o, self)
-  self.__index = self
-  return o
+
+function control_player(pl)
+	accel = 0.05
+	if (btn(0)) pl.dx -= accel 
+	if (btn(1)) pl.dx += accel 
+	if (btn(2)) pl.dy -= accel 
+	if (btn(3)) pl.dy += accel 
 end
-
-function spawn_player(starting_position)
-	player = Player:new{
-		x = starting_position.x,
-		y = starting_position.y,
-		dx = 0,
-		dy = 0
-	}
-	add(game_objects, player)
-	return player
-end
-
-player = spawn_player{x=0, y=0}
-
-function player:update()
-	if input_utils[up] then
-		self.position.y -= 1
-	end
-	if input_utils[down] then
-		self.position.y += 1
-	end
-	if input_utils[right] then
-		self.position.x += 1
-	end
-	if input_utils[left] then
-		self.position.x -= 1
-	end
-end
-
-function player:draw()
-	spr(1, player.position.x, player.position.y)
-end
-
 
 -->8
 -- section 2
@@ -189,7 +137,7 @@ end
 -- the fastest moving actor)
 
 function solid_actor(a, dx, dy)
-	for a2 in all(actor) do
+	for a2 in all(game_objects) do
 		if a2 != a then
 		
 			local x=(a.x+dx) - a2.x
@@ -246,6 +194,7 @@ end
 
 -- checks both walls and actors
 function solid_a(a, dx, dy)
+	printh(tostring(a))
 	if solid_area(a.x+dx,a.y+dy,
 				a.w,a.h) then
 				return true end
@@ -262,7 +211,7 @@ function collide_event(a1,a2)
 	
 	-- player collects treasure
 	if (a1==player and a2.k==35) then
-		del(actor,a2)
+		del(game_objects,a2)
 		sfx(3)
 		return true
 	end
@@ -310,6 +259,68 @@ function move_actor(a)
 	
 end
 
+-- make an actor
+-- and add to global collection
+-- x,y means center of the actor
+-- in map tiles
+function make_actor(k, x, y)
+	a={
+		k = k,
+		x = x,
+		y = y,
+		dx = 0,
+		dy = 0,		
+		frame = 0,
+		t = 0,
+		friction = 0.15,
+		bounce  = 0.3,
+		frames = 2,
+		
+		-- half-width and half-height
+		-- slightly less than 0.5 so
+		-- that will fit through 1-wide
+		-- holes.
+		w = 0.4,
+		h = 0.4
+	}
+	
+	add(game_objects, a)
+	return a
+end
+
+function draw_actor(a)
+	local sx = (a.x * 8) - 4
+	local sy = (a.y * 8) - 4
+	spr(a.k + a.frame, sx, sy)
+end
+
+-- converts anything to string, even nested tables
+function tostring(any)
+    if type(any)=="function" then 
+        return "function" 
+    end
+    if any==nil then 
+        return "nil" 
+    end
+    if type(any)=="string" then
+        return any
+    end
+    if type(any)=="boolean" then
+        if any then return "true" end
+        return "false"
+    end
+    if type(any)=="table" then
+        local str = "{ "
+        for k,v in pairs(any) do
+            str=str..tostring(k).."->"..tostring(v).." "
+        end
+        return str.."}"
+    end
+    if type(any)=="number" then
+        return ""..any
+    end
+    return "unkown" -- should never show
+end
 
 -->8
 --section 4
