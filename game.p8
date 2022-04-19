@@ -3,11 +3,22 @@ version 36
 __lua__
 -- Framework
 
+tile_width = 8
+screen_width = 127
+screen_height = 112
+
 game_objects = {}
 actions = {}
 inventory = {}
+
 function _init()
-	player = make_actor(9, 0, 0, 2, 2, 2, 10)
+	player = make_actor(9, 0, 12, 2, tile_width * 2, tile_width * 2, 10)
+	rude_dog = make_actor(32, 20, 30, 1, tile_width * 2, tile_width * 2, 0)
+	rude_dog.dx = 1
+	rude_dog.dy = 1
+	rude_dog.bounce = 1
+	rude_dog.friction = 0
+
 	foreach(game_objects, 
 	function(go) 
 		if go.init != nil then
@@ -19,7 +30,7 @@ end
 function _update()
 	control_player(player)
 	foreach(game_objects, move_actor)
-	if(time() % 6 == 0) spawn_collectible()
+	if (time() % 6 == 0) spawn_collectible()
 	-- Input utils update MUST be done last
 	input_utils:update()
 end
@@ -28,7 +39,7 @@ function _draw()
     cls()
 	map(0)
 	foreach(game_objects, draw_actor)
-	rectfill(0, 0, 127, 10, 1)
+	rectfill(0, 0, screen_width, 10, 1)
 	print("items: ", 1, 1, 7)
 	draw_inventory_items()
 end
@@ -91,7 +102,7 @@ end
 -- section 1
 
 function control_player(pl)
-	accel = 0.05
+	accel = 0.5
 	if (btn(0)) pl.dx -= accel 
 	if (btn(1)) pl.dx += accel 
 	if (btn(2)) pl.dy -= accel 
@@ -123,11 +134,7 @@ end
 -- with any walls
 
 function solid_area(x,y,width,height)
-	return 
-		solid(x-width/2,y-height/2) or
-		solid(x+width/2,y-height/2) or
-		solid(x-width/2,y+height/2) or
-		solid(x+width/2,y+height/2)
+	return (x < 0 or (x + width) > screen_width) or (y < 12 or (y + height > screen_height))
 end
 
 -- true if [a] will hit another
@@ -142,11 +149,13 @@ function solid_actor(a, dx, dy)
 	for a2 in all(game_objects) do
 		if a2 != a then
 		
-			local x=(a.x+dx) - a2.x
-			local y=(a.y+dy) - a2.y
+			-- distant between central points
+			local distant_x = abs((a.x + (a.width / 2) + dx) - (a2.x + (a2.width / 2)))
+			local distant_y = abs((a.y + (a.height / 2) + dy) - (a2.y + (a2.height / 2)))
 			
-			if ((abs(x) < (a.width/2+a2.width/2)) and
-					 (abs(y) < (a.height/2+a2.height/2)))
+			-- calculate any overlap
+			if ((distant_x < (a.width / 2 + a2.width / 2)) and
+					 (distant_y < (a.height / 2 + a2.height / 2)))
 			then
 				
 				-- moving together?
@@ -158,34 +167,12 @@ function solid_actor(a, dx, dy)
 				
 				-- along x
 				
-				if (dx != 0 and abs(x) <
-				    abs(a.x-a2.x))
-				then
-					
-					v=abs(a.dx)>abs(a2.dx) and 
-					  a.dx or a2.dx
-					a.dx,a2.dx = v,v
-					
-					local ca=
+				-- have they moved closer
+
+				local ca=
 					 collide_event(a,a2) or
 					 collide_event(a2,a)
-					return not ca
-				end
-				
-				-- along y
-				
-				if (dy != 0 and abs(y) <
-					   abs(a.y-a2.y)) then
-					v=abs(a.dy)>abs(a2.dy) and 
-					  a.dy or a2.dy
-					a.dy,a2.dy = v,v
-					
-					local ca=
-					 collide_event(a,a2) or
-					 collide_event(a2,a)
-					return not ca
-				end
-				
+				return not ca				
 			end
 		end
 	end
@@ -250,9 +237,10 @@ function move_actor(a)
 	a.dy *= (1-a.friction)
 	
 	-- advance one frame given sprite speed
-	if(a.sprite_speed > 0) then
-		if(a.t%(100/a.sprite_speed)==0) a.frame+= a.width
-		if(a.frame>a.frames) a.frame=0
+	if (a.sprite_speed > 0) then
+		if (a.t % (100 / a.sprite_speed) == 0) then
+			a.frame = (a.frame + 1 < a.frames) and a.frame + 1 or 0
+		end
 	end
 	a.t += 1
 end
@@ -284,10 +272,12 @@ function make_actor(k, x, y, frames, width, height, sprite_speed)
 end
 
 function draw_actor(a)
-	local sx = (a.x * 8) - (4)
-	local sy = (a.y * 8) - (4)
-	spr(a.k + a.frame, sx, sy, a.width, a.height)
-	printh(tostring(sx))
+	local sprite_width = a.width / tile_width
+	local sprite_height = a.height / tile_width
+	if (a == rude_dog) then
+		printh("x:" .. a.x .. " y:" .. a.y .. "dx:" .. a.dx .. " dy:" .. a.dy)
+	end
+	spr(a.k + (a.frame * sprite_width), a.x, a.y, sprite_width, sprite_height)
 end
 
 function draw_inventory_items()
@@ -300,7 +290,7 @@ end
 
 function spawn_collectible()
 	local i = rnd({1, 16, 17})
-	make_actor(i, 1 + rnd(14), 1 + rnd(14), 1, 1, 1, 0)
+	make_actor(i, rnd(screen_width - tile_width), rnd(screen_height - 10) + 10, 1, tile_width, tile_width, 0)
 end
 
 -- converts anything to string, even nested tables
