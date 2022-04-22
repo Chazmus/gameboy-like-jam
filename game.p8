@@ -10,12 +10,15 @@ screen_height = 112
 game_objects = {}
 actions = {}
 inventory = {}
+inventory[1] =  { type = "yeast", required = 3, collected = 0, sprite = 17}
+inventory[2] =  { type = "grain", required = 3, collected = 0, sprite = 16}
+inventory[3] =  { type = "hops", required = 3, collected = 0, sprite = 1}
 
 function _init()
 	player = make_actor(9, 0, 12, 2, tile_width * 2, tile_width * 2, 10)
-	rude_dog = make_actor(32, 20, 30, 1, tile_width * 2, tile_width * 2, 0)
-	rude_dog.dx = 1
-	rude_dog.dy = 1
+	rude_dog = make_actor(32, rnd(screen_width - (tile_width * 2)), rnd(screen_height - (tile_width * 2) - 10) + 10, 1, tile_width * 2, tile_width * 2, 0)
+	rude_dog.dx = 1.5
+	rude_dog.dy = 1.5
 	rude_dog.bounce = 1
 	rude_dog.friction = 0
 
@@ -30,7 +33,7 @@ end
 function _update()
 	control_player(player)
 	foreach(game_objects, move_actor)
-	if (time() % 6 == 0) spawn_collectible()
+	if (time() % 3 == 0) spawn_collectible()
 	-- Input utils update MUST be done last
 	input_utils:update()
 end
@@ -39,8 +42,6 @@ function _draw()
     cls()
 	map(0)
 	foreach(game_objects, draw_actor)
-	rectfill(0, 0, screen_width, 10, 1)
-	print("items: ", 1, 1, 7)
 	draw_inventory_items()
 end
 
@@ -198,14 +199,31 @@ end
 function collide_event(a1,a2)
 	
 	-- player collects treasure
-	if (a1==player and (a2.k == 1 or a2.k == 16 or a2.k == 17)) then
-		del(game_objects,a2)
-		sfx(3)
-		add(inventory, a2.k)
+	if (a1==player) then
+		for index, item in ipairs(inventory) do
+			if (item.sprite == a2.k and item.collected < item.required) then
+				item.collected += 1
+				del(game_objects,a2)
+				sfx(3)
+			end
+		end
+
+		if (a2 == rude_dog) then
+			for index, item in ipairs(inventory) do
+				item.collected = 0
+			end
+		end
+
 		return true
 	end
-	
-	sfx(2) -- generic bump sound
+
+	if (a1 == rude_dog) then
+		for index, item in ipairs(inventory) do
+			if (a2.k == item.sprite) then
+				del(game_objects,a2)
+			end
+		end
+	end
 	
 	return false
 end
@@ -274,23 +292,29 @@ end
 function draw_actor(a)
 	local sprite_width = a.width / tile_width
 	local sprite_height = a.height / tile_width
-	if (a == rude_dog) then
-		printh("x:" .. a.x .. " y:" .. a.y .. "dx:" .. a.dx .. " dy:" .. a.dy)
-	end
 	spr(a.k + (a.frame * sprite_width), a.x, a.y, sprite_width, sprite_height)
 end
 
 function draw_inventory_items()
-	local x = 24
-	for a in all(inventory) do
-		spr(a, x, 1)
-		x += 10
+	rectfill(0, 0, screen_width, 10, 1)
+	for index, item in ipairs(inventory) do
+		print_inventory_item(item, index)
 	end
 end
 
+function print_inventory_item(item, position)
+	x = (position - 1) * 25
+	spr(item.sprite, x + 1, 1)
+	print(item.collected .. '/' .. item.required, x + 10, 3, 7)
+end
+
 function spawn_collectible()
-	local i = rnd({1, 16, 17})
-	make_actor(i, rnd(screen_width - tile_width), rnd(screen_height - 10) + 10, 1, tile_width, tile_width, 0)
+	for index, item in ipairs(inventory) do
+		if (item.collected < item.required) then
+			make_actor(item.sprite, rnd(screen_width - tile_width), rnd(screen_height - 10) + 10, 1, tile_width, tile_width, 0)
+			break
+		end
+	end
 end
 
 -- converts anything to string, even nested tables
